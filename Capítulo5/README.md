@@ -198,3 +198,9 @@ Para mejorar este proyecto, podrías:
 - Implementar validación cruzada en el entrenamiento del modelo.
 - Añadir un paso de deployment automático en el pipeline de CI.
 - Implementar logging y monitoreo más avanzados.
+
+### [Índice](../README.md)
+
+### [Práctica 4. Clasificación de imágenes de dígitos escritos a mano](../Capítulo4/README.md)
+
+### [Práctica 6. Proceso de despliegue de un modelo de Machine Learning](../Capítulo6/README.md)
