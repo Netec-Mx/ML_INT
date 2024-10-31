@@ -280,3 +280,9 @@ Para continuar mejorando este proceso, podrías considerar:
 - Explorar más modelos y técnicas de optimización de hiperparámetros.<br>
 - Desarrollar un pipeline de reentrenamiento automático cuando se detecte concept drift.<br>
 - Implementar un sistema de monitoreo continuo del rendimiento del modelo en producción.<br>
+
+### [Índice](../README.md)
+
+### [Práctica 2. Mejora de recomendaciones de productos](../Capítulo2/README.md)
+
+### [Práctica 4. Clasificación de imágenes de dígitos escritos a mano](../Capítulo4/README.md)
