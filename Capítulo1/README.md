@@ -205,3 +205,8 @@ Este laboratorio te ha permitido practicar:
 4. Testing Unitario: Implementaste tests unitarios para verificar el funcionamiento de la clase.
 
 Además, has aplicado estos conceptos a un problema real de análisis de datos de ventas, lo cual es relevante para la ciencia de datos.
+
+
+### [Índice](../README.md)
+
+### [Práctica 2. Mejora de recomendaciones de productos](../Capítulo2/README.md)
