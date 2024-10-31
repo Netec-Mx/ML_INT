@@ -228,3 +228,9 @@ En este laboratorio, has aprendido a:
 4. Crear pruebas unitarias para verificar la calidad del pipeline de datos.
 
 Este pipeline de ingeniería de datos ha preparado los datos para su uso en un modelo de recomendación de productos. Los próximos pasos serían utilizar estos datos procesados para entrenar y evaluar un modelo de machine learning.
+
+### [Índice](../README.md)
+
+### [Práctica 1. Análisis de ventas](../Capítulo1/README.md)
+
+### [Práctica 3. Mejora del proceso de aprobación de créditos](../Capítulo3/README.md)
