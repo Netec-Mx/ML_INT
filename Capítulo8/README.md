@@ -303,3 +303,7 @@ Para mejorar este proyecto, podrías:
 - Desarrollar una interfaz de usuario amigable para los agentes aduaneros.<br>
 - Implementar explicabilidad del modelo (por ejemplo, usando SHAP values) para ayudar a los agentes a entender las predicciones. <br>
 - Expandir el sistema para manejar múltiples idiomas y variaciones regionales en las descripciones de productos. <br>
+
+### [Índice](../README.md)
+
+### [Práctica 7. ML Governance (ML + OPS)](../Capítulo7/README.md)
