@@ -321,3 +321,9 @@ Para continuar mejorando, podrías considerar:
 - Explorar arquitecturas de redes neuronales más avanzadas, como las redes residuales.<br>
 - Investigar técnicas de interpretabilidad del modelo para entender mejor sus predicciones.<br>
 - Implementar un sistema de monitoreo continuo del rendimiento del modelo en producción.
+
+### [Índice](../README.md)
+
+### [Práctica 3. Mejora del proceso de aprobación de créditos](../Capítulo3/README.md)
+
+### [Práctica 5. Implementación de un modelo de clasificación de imágenes](../Capítulo5/README.md)
