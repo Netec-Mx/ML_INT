@@ -4,99 +4,95 @@
 
 Al finalizar la práctica, serás capaz de:
 
-- Comprender los principios fundamentales de ML Governance. <br>
-- Implementar prácticas de gobernanza en las fases de desarrollo, entrega y operaciones de un proyecto de ML.<br>
-- Aprender a gestionar el ciclo de vida completo de un modelo de ML.<br>
-- Familiarizarse con herramientas y técnicas para asegurar la calidad, reproducibilidad y ética en proyectos de ML.
+- Comprender cómo aplicar el machine learning en el sector aduanero.
+- Desarrollar un modelo de ML para un caso de uso específico en aduanas.
+- Aprender a manejar datos típicos del sector aduanero.
+- Implementar un sistema de ML completo, desde la preparación de datos hasta el despliegue y monitoreo.
 
 ## Duración aproximada:
 
 - 25 minutos.
 
-## Tabla de ayuda:
-Agregar una tabla con la información que pueda requerir el participante durante el laboratorio, como versión de software, IPs de servers, usuarios y credenciales de acceso.
-
 ## Problema a desarrollar:
 
-**Sistema de Detección de Fraude en Transacciones Bancarias.**
+**Sistema de Clasificación Arancelaria Automatizada.**
 
-Imagina que trabajas para un banco que está desarrollando un sistema de detección de fraude basado en machine learning. Tu tarea es implementar este sistema siguiendo las mejores prácticas de ML Governance a lo largo de todo el ciclo de vida del proyecto.
+Imagina que trabajas para la Aduana Nacional y te han encargado desarrollar un sistema de clasificación arancelaria automatizada utilizando machine learning. Este sistema ayudará a los agentes aduaneros a clasificar correctamente los productos importados según el Sistema Armonizado (SA) de designación y codificación de mercancías.
 
 ## Instrucciones:
 
-Fase 1: Development
- Paso 1: Definición del Problema y Planificación
-1. Crea un documento de especificación del proyecto (`project_spec.md`):
-```markdown
- Proyecto de Detección de Fraude
- Objetivo
-Desarrollar un sistema de ML para detectar transacciones fraudulentas en tiempo real.
- Métricas de Éxito
-- Precision mínima del 95%
-- Recall mínimo del 90%
-- Tiempo de respuesta < 100ms por transacción
- Consideraciones Éticas
-- Minimizar falsos positivos para evitar inconvenientes a clientes legítimos
-- Asegurar la privacidad de los datos de los clientes
-- Evitar sesgos basados en características protegidas (edad, género, etnia, etc.)
- Stakeholders
-- Equipo de ML: Desarrollo y mantenimiento del modelo
-- Equipo de Seguridad: Proporciona conocimiento del dominio y valida resultados
-- Equipo Legal: Asegura el cumplimiento de regulaciones (GDPR, etc.)
-- Equipo de TI: Responsable de la infraestructura y despliegue
+### Tarea 1. Comprensión del problema y recopilación de datos.
+
+**Paso 1.** Investiga sobre el Sistema Armonizado (SA) y la clasificación arancelaria.
+
+**Paso 2.** Recopila un conjunto de datos de productos importados con sus descripciones y códigos SA correspondientes.
+
+**Paso 3.** Crea un archivo CSV (`data/import_data.csv`) con la siguiente estructura:
+
+```csv
+id,description,hs_code
+1,"Laptop computer, 15-inch screen, 8GB RAM, 256GB SSD",8471.30
+2,"Men's cotton t-shirt, short sleeve, blue",6109.10
+3,"Smartphone, 6.1-inch display, 128GB storage",8517.13
+...
 ```
- Paso 2: Preparación y Análisis de Datos
-2. Crea un script para la preparación de datos (`src/data_preparation.py`):
+### Tarea 2. Preparación y análisis de datos.
+
+**Paso 1.** Crea un script (`src/data_preparation.py`) para preparar los datos:
+
 ```python
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.feature_extraction.text import TfidfVectorizer
 import joblib
-def load_and_preprocess_data(file_path):
+def prepare_data(file_path):
      Cargar datos
     data = pd.read_csv(file_path)
     
-     Separar características y etiquetas
-    X = data.drop('is_fraud', axis=1)
-    y = data['is_fraud']
+     Dividir en características (X) y etiquetas (y)
+    X = data['description']
+    y = data['hs_code']
     
      Dividir en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-     Escalar características
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+     Vectorizar las descripciones usando TF-IDF
+    vectorizer = TfidfVectorizer(max_features=5000)
+    X_train_vectorized = vectorizer.fit_transform(X_train)
+    X_test_vectorized = vectorizer.transform(X_test)
     
-     Guardar el scaler para uso futuro
-    joblib.dump(scaler, 'models/scaler.joblib')
+     Guardar el vectorizador para uso futuro
+    joblib.dump(vectorizer, 'models/tfidf_vectorizer.joblib')
     
-    return X_train_scaled, X_test_scaled, y_train, y_test
+    return X_train_vectorized, X_test_vectorized, y_train, y_test
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = load_and_preprocess_data('data/transactions.csv')
+    X_train, X_test, y_train, y_test = prepare_data('data/import_data.csv')
      Guardar los datos procesados
-    np.save('data/processed/X_train.npy', X_train)
-    np.save('data/processed/X_test.npy', X_test)
-    np.save('data/processed/y_train.npy', y_train)
-    np.save('data/processed/y_test.npy', y_test)
+    joblib.dump(X_train, 'data/processed/X_train.joblib')
+    joblib.dump(X_test, 'data/processed/X_test.joblib')
+    joblib.dump(y_train, 'data/processed/y_train.joblib')
+    joblib.dump(y_test, 'data/processed/y_test.joblib')
 ```
- Paso 3: Desarrollo del Modelo
-3. Crea un script para entrenar el modelo (`src/train_model.py`):
+
+### Tarea 3. Desarrollo del modelo.
+
+**Paso 1.** Crea un script (`src/train_model.py`) para entrenar el modelo:
+
 ```python
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import precision_score, recall_score
 import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
 import mlflow
 def train_and_evaluate_model():
      Cargar datos procesados
-    X_train = np.load('data/processed/X_train.npy')
-    X_test = np.load('data/processed/X_test.npy')
-    y_train = np.load('data/processed/y_train.npy')
-    y_test = np.load('data/processed/y_test.npy')
+    X_train = joblib.load('data/processed/X_train.joblib')
+    X_test = joblib.load('data/processed/X_test.joblib')
+    y_train = joblib.load('data/processed/y_train.joblib')
+    y_test = joblib.load('data/processed/y_test.joblib')
     
      Iniciar el seguimiento de MLflow
-    mlflow.set_experiment("Fraud Detection Model")
+    mlflow.set_experiment("HS Code Classification")
     
     with mlflow.start_run():
          Entrenar el modelo
@@ -105,37 +101,68 @@ def train_and_evaluate_model():
         
          Evaluar el modelo
         y_pred = model.predict(X_test)
-        precision = precision_score(y_test, y_pred)
-        recall = recall_score(y_test, y_pred)
+        report = classification_report(y_test, y_pred, output_dict=True)
         
          Registrar métricas y parámetros
         mlflow.log_param("n_estimators", 100)
-        mlflow.log_metric("precision", precision)
-        mlflow.log_metric("recall", recall)
+        mlflow.log_metric("accuracy", report['accuracy'])
+        mlflow.log_metric("weighted_avg_f1-score", report['weighted avg']['f1-score'])
         
          Guardar el modelo
         mlflow.sklearn.log_model(model, "model")
         
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print("Classification Report:")
+        print(classification_report(y_test, y_pred))
     
     return model
 if __name__ == "__main__":
     model = train_and_evaluate_model()
-    joblib.dump(model, 'models/fraud_detection_model.joblib')
+    joblib.dump(model, 'models/hs_code_classifier.joblib')
 ```
- Fase 2: Delivery
- Paso 4: Pruebas y Validación
-4. Crea un script para realizar pruebas adicionales (`src/model_testing.py`):
+
+### Tarea 4. Implementación del servicio de predicción.
+
+**Paso 1.** Crea un script (`src/predict_service.py`) para implementar el servicio de predicción:
+
 ```python
+from flask import Flask, request, jsonify
 import joblib
 import numpy as np
+app = Flask(__name__)
+ Cargar el modelo y el vectorizador
+model = joblib.load('models/hs_code_classifier.joblib')
+vectorizer = joblib.load('models/tfidf_vectorizer.joblib')
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.json
+    description = data['description']
+    
+     Vectorizar la descripción
+    vectorized_description = vectorizer.transform([description])
+    
+     Realizar la predicción
+    prediction = model.predict(vectorized_description)[0]
+    
+    return jsonify({'hs_code': prediction})
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+### Tarea 5. Pruebas y validación.
+
+**Paso 1.** Crea un script (`src/test_model.py`) para realizar pruebas adicionales:
+
+```python
+import joblib
 from sklearn.metrics import confusion_matrix, classification_report
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 def test_model():
      Cargar el modelo y los datos de prueba
-    model = joblib.load('models/fraud_detection_model.joblib')
-    X_test = np.load('data/processed/X_test.npy')
-    y_test = np.load('data/processed/y_test.npy')
+    model = joblib.load('models/hs_code_classifier.joblib')
+    X_test = joblib.load('data/processed/X_test.joblib')
+    y_test = joblib.load('data/processed/y_test.joblib')
     
      Realizar predicciones
     y_pred = model.predict(X_test)
@@ -147,153 +174,132 @@ def test_model():
     
      Generar matriz de confusión
     cm = confusion_matrix(y_test, y_pred)
-    print("Confusion Matrix:")
-    print(cm)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title('Confusion Matrix')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    plt.savefig('reports/confusion_matrix.png')
+    plt.close()
 if __name__ == "__main__":
     test_model()
 ```
- Paso 5: Documentación
-5. Crea un documento de modelo (`model_card.md`):
+
+### Tarea 6. Documentación.
+
+**Paso 1.** Crea un documento de modelo (`model_card.md`):
+
 ```markdown
- Model Card: Fraud Detection System
+ Model Card: HS Code Classifier
  Model Details
 - Developer: [Your Name]
 - Model Date: [Current Date]
 - Model Version: 1.0
 - Model Type: Random Forest Classifier
  Intended Use
-- Primary Use: Detect fraudulent transactions in real-time
-- Intended Users: Bank's fraud detection team
+- Primary Use: Assist customs officers in classifying imported goods according to the Harmonized System (HS)
+- Intended Users: Customs officers and import/export specialists
  Training Data
-- Source: Historical transaction data from [Date Range]
-- Preprocessing: Standard scaling of numerical features
+- Source: Historical import data with product descriptions and corresponding HS codes
+- Size: [Number of samples] records
+- Preprocessing: TF-IDF vectorization of product descriptions
  Evaluation Data
 - 20% hold-out test set from the original dataset
  Ethical Considerations
-- The model has been tested for bias against protected characteristics
-- Privacy measures are in place to protect customer data
+- The model should be used as a tool to assist human decision-making, not to replace it entirely
+- Regular audits should be performed to ensure the model is not introducing or amplifying biases
  Caveats and Recommendations
-- The model should be retrained periodically with new data
-- Human oversight is recommended for final decision-making on flagged transactions
+- The model's performance may vary for product categories that are underrepresented in the training data
+- The model should be retrained periodically with new data to stay up-to-date with changes in product descriptions and HS codes
+- Users should be trained on how to interpret the model's predictions and when to seek additional verification
 ```
- Paso 6: Configuración del Pipeline de CI/CD
-6. Crea un archivo de configuración para GitHub Actions (`.github/workflows/ci_cd.yml`):
-```yaml
-name: CI/CD Pipeline
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run tests
-      run: python -m pytest tests/
-    - name: Train model
-      run: python src/train_model.py
-    - name: Run additional tests
-      run: python src/model_testing.py
+ 
+### Tarea 7. Despliegue y monitoreo.
+**Paso 1.** Utiliza Docker para containerizar la aplicación. Crea un `Dockerfile`:
+
+```dockerfile
+FROM python:3.8-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/ .
+COPY models/ models/
+CMD ["python", "predict_service.py"]
 ```
- Fase 3: Operations
- Paso 7: Despliegue del Modelo
-7. Crea un script para servir el modelo (`src/serve_model.py`):
+**Paso 2.** Crea un script (`src/monitor_service.py`) para monitorear el servicio:
+
 ```python
-from flask import Flask, request, jsonify
-import joblib
-import numpy as np
-app = Flask(__name__)
- Cargar el modelo y el scaler
-model = joblib.load('models/fraud_detection_model.joblib')
-scaler = joblib.load('models/scaler.joblib')
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.json
-    features = np.array(list(data.values())).reshape(1, -1)
-    scaled_features = scaler.transform(features)
-    prediction = model.predict(scaled_features)[0]
-    return jsonify({'fraud_prediction': int(prediction)})
-if __name__ == '__main__':
-    app.run(debug=True)
-```
- Paso 8: Monitoreo y Logging
-8. Agrega logging y monitoreo al script de servicio (`src/serve_model.py`):
-```python
-from flask import Flask, request, jsonify
-import joblib
-import numpy as np
+import requests
+import time
 import logging
-from prometheus_client import Counter, Histogram
-from flask_prometheus_metrics import register_metrics
-app = Flask(__name__)
+from prometheus_client import start_http_server, Counter, Histogram
  Configurar logging
-logging.basicConfig(filename='fraud_detection.log', level=logging.INFO)
+logging.basicConfig(filename='hs_code_classifier.log', level=logging.INFO)
  Métricas de Prometheus
-PREDICTIONS = Counter('fraud_predictions_total', 'Total number of predictions')
+PREDICTIONS = Counter('hs_code_predictions_total', 'Total number of predictions')
 RESPONSE_TIME = Histogram('prediction_response_time_seconds', 'Response time for predictions')
- Registrar métricas
-register_metrics(app)
- Cargar el modelo y el scaler
-model = joblib.load('models/fraud_detection_model.joblib')
-scaler = joblib.load('models/scaler.joblib')
-@app.route('/predict', methods=['POST'])
-@RESPONSE_TIME.time()
-def predict():
-    data = request.json
-    features = np.array(list(data.values())).reshape(1, -1)
-    scaled_features = scaler.transform(features)
-    prediction = model.predict(scaled_features)[0]
-    PREDICTIONS.inc()
-    logging.info(f"Prediction made: {prediction}")
-    return jsonify({'fraud_prediction': int(prediction)})
+def monitor_prediction_service():
+    while True:
+        try:
+            start_time = time.time()
+            response = requests.post('http://localhost:5000/predict', 
+                                     json={'description': 'Sample product description'})
+            duration = time.time() - start_time
+            
+            if response.status_code == 200:
+                PREDICTIONS.inc()
+                RESPONSE_TIME.observe(duration)
+                logging.info(f"Prediction made: {response.json()}")
+            else:
+                logging.error(f"Error in prediction: {response.status_code}")
+        
+        except Exception as e:
+            logging.error(f"Error in monitoring: {str(e)}")
+        
+        time.sleep(60)   Esperar 1 minuto antes de la próxima verificación
 if __name__ == '__main__':
-    app.run(debug=True)
+    start_http_server(8000)   Iniciar servidor de métricas de Prometheus
+    monitor_prediction_service()
 ```
- Paso 9: Mantenimiento y Actualización
-9. Crea un script para reentrenar el modelo periódicamente (`src/retrain_model.py`):
+
+**Paso 3.** Configura Prometheus y Grafana para visualizar las métricas del servicio.
+
+### Tarea 8. Mantenimiento y actualización.
+
+**Paso 1.** Crea un script (`src/update_model.py`) para actualizar periódicamente el modelo:
+
 ```python
 import schedule
 import time
 from train_model import train_and_evaluate_model
-def retrain_job():
-    print("Retraining model...")
+def update_model_job():
+    print("Updating HS Code Classifier model...")
     train_and_evaluate_model()
-    print("Model retrained and saved.")
- Programar el reentrenamiento para que ocurra cada semana
-schedule.every().monday.at("02:00").do(retrain_job)
+    print("Model updated and saved.")
+ Programar la actualización del modelo para que ocurra cada mes
+schedule.every().month.at("02:00").do(update_model_job)
 if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(1)
 ```
- 
-Conclusión
-Este laboratorio te ha introducido a los conceptos clave de ML Governance a lo largo del ciclo de vida completo de un proyecto de ML:
-1. **Development**:
-   - Definición clara del problema y planificación
-   - Preparación y análisis de datos éticos
-   - Desarrollo del modelo con seguimiento de experimentos (MLflow)
-2. **Delivery**:
-   - Pruebas exhaustivas y validación
-   - Documentación detallada (Model Card)
-   - Implementación de un pipeline de CI/CD
-3. **Operations**:
-   - Despliegue del modelo como un servicio web
-   - Monitoreo y logging para seguimiento en producción
-   - Mantenimiento y actualización periódica del modelo
+
+## Resultado esperado:
+
+Este laboratorio te ha guiado a través de la implementación de un sistema de clasificación arancelaria automatizada utilizando machine learning, aplicado al sector aduanero. Has aprendido a:
+
+1. Preparar y analizar datos específicos del sector aduanero. <br>
+2. Desarrollar y entrenar un modelo de clasificación de códigos HS.<br>
+3. Implementar un servicio de predicción.<br>
+4. Realizar pruebas y validación del modelo.<br>
+5. Documentar el modelo y su uso previsto.<br>
+6. Desplegar y monitorear el servicio en producción.<br>
+7. Mantener y actualizar el modelo periódicamente.<br>
+
 Para mejorar este proyecto, podrías:
-- Implementar pruebas de equidad y sesgo más exhaustivas
-- Agregar explicabilidad al modelo (por ejemplo, usando SHAP values)
-- Implementar un sistema de versionado de datos y modelos más robusto
-- Configurar alertas basadas en el rendimiento del modelo en producción
-- Implementar un sistema de feedback loop para mejorar continuamente el modelo con nuevos datos
+
+- Implementar técnicas de aprendizaje activo para mejorar continuamente el modelo con la retroalimentación de los agentes aduaneros.<br>
+- Integrar el sistema con las bases de datos y sistemas existentes de la aduana.<br>
+- Desarrollar una interfaz de usuario amigable para los agentes aduaneros.<br>
+- Implementar explicabilidad del modelo (por ejemplo, usando SHAP values) para ayudar a los agentes a entender las predicciones. <br>
+- Expandir el sistema para manejar múltiples idiomas y variaciones regionales en las descripciones de productos. <br>
