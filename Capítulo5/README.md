@@ -168,7 +168,7 @@ jobs:
       run: python src/evaluation/ml_test_score.py
 ```
 
- ## Solución paso a paso:
+## Solución paso a paso:
  
 1. **Implementación del Modelo**:
    - Creamos una arquitectura de red neuronal convolucional simple para clasificación binaria.
