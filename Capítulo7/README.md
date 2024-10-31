@@ -325,3 +325,9 @@ Para mejorar este proyecto, podrías:
 - Implementar un sistema de versionado de datos y modelos más robusto.<br>
 - Configurar alertas basadas en el rendimiento del modelo en producción.<br>
 - Implementar un sistema de feedback loop para mejorar continuamente el modelo con nuevos datos.
+
+### [Índice](../README.md)
+
+### [Práctica 6. Proceso de despliegue de un modelo de Machine Learning](../Capítulo6/README.md)
+
+### [Práctica 8. Aplicación de Machine Learning en el sector aduanero](../Capítulo8/README.md)
