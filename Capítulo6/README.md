@@ -220,3 +220,9 @@ Para mejorar este proyecto, podrías:
 - Agregar más métricas específicas del negocio.<br>
 - Configurar alertas basadas en umbrales de métricas.<br>
 - Implementar un pipeline de CI/CD para automatizar el despliegue.
+
+### [Índice](../README.md)
+
+### [Práctica 5. Implementación de un modelo de clasificación de imágenes](../Capítulo5/README.md)
+
+### [Práctica 7. ML Governance (ML + OPS)](../Capítulo7/README.md)
