@@ -1,12 +1,12 @@
-# Práctica 1: Ingeniería de Software para la Ciencia de los Datos
+# Práctica 1. Análisis de ventas
 
 ## Objetivo de la práctica:
 
 Al finalizar la práctica, serás capaz de:
 
-- Implementar Programación Orientada a Objetos (POO) en Python.
-- Utilizar módulos y clases en Python.
-- Asegurar la mantenibilidad y documentación del código.
+- Implementar Programación Orientada a Objetos (POO) en Python. <br>
+- Utilizar módulos y clases en Python.<br>
+- Asegurar la mantenibilidad y documentación del código.<br>
 - Implementar *testing unitario*.
 
 ## Duración aproximada:
@@ -35,19 +35,19 @@ fecha,monto
 
 ## Instrucciones: 
 
-**Tarea 1.** Crear la estructura del proyecto.
+### **Tarea 1.** Crear la estructura del proyecto.
 
-1. Crea un nuevo directorio llamado `analizador_ventas`.
+Paso 1. Crea un nuevo directorio llamado `analizador_ventas`.
 
-2. Dentro de este directorio, crea los siguientes archivos:
+Paso 2. Dentro de este directorio, crea los siguientes archivos:
    - `analizador.py`: Contendrá la clase principal `AnalizadorVentas`.
    - `test_analizador.py`: Contendrá los tests unitarios.
    - `main.py`: Será el punto de entrada de nuestra aplicación.
    - `ventas_mensuales.txt`: Un archivo de texto con datos de ventas de ejemplo.
 
-**Tarea 2.** Implementar la clase _AnalizadorVentas_.
+### **Tarea 2.** Implementar la clase _AnalizadorVentas_.
 
-En el archivo `analizador.py`, implementa la siguiente clase:
+**Paso 1.** En el archivo `analizador.py`, implementa la siguiente clase:
 
 ```python
 from datetime import datetime
@@ -108,9 +108,9 @@ Promedio de ventas diarias: ${promedio_diario:.2f}
 Día con mayores ventas: {dia_mayor_venta.strftime('%Y-%m-%d')} (${monto_mayor_venta:.2f})"""
 ```
 
-**Tarea 3.** Implementar los tests unitarios.
+### **Tarea 3.** Implementar los tests unitarios.
 
-En el archivo `test_analizador.py`, implementa los siguientes tests:
+**Paso 1.** En el archivo `test_analizador.py`, implementa los siguientes tests:
 
 ```python
 import unittest
@@ -153,9 +153,9 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-**Tarea 4.** Crear el script principal.
+### **Tarea 4.** Crear el script principal.
 
-En el archivo `main.py`, implementa el siguiente código:
+**Paso 1.** En el archivo `main.py`, implementa el siguiente código:
 
 ```python
 from analizador import AnalizadorVentas
@@ -168,9 +168,9 @@ if __name__ == "__main__":
     main()
 ```
 
-**Tarea 5.** Crear el archivo de datos de ejemplo.
+### **Tarea 5.** Crear el archivo de datos de ejemplo.
 
-En el archivo `ventas_mensuales.txt`, ingresa algunos datos de ventas de ejemplo:
+**Paso 1.** En el archivo `ventas_mensuales.txt`, ingresa algunos datos de ventas de ejemplo:
 
 ```
 fecha,monto
@@ -181,15 +181,15 @@ fecha,monto
 2024-01-05,1950.75
 ```
 
-**Tarea 6.** Ejecutar los tests y la aplicación.
+### **Tarea 6.** Ejecutar los tests y la aplicación.
 
-1. Para ejecutar los tests unitarios, usa el siguiente comando en la terminal:
+**Paso 1.** Para ejecutar los tests unitarios, usa el siguiente comando en la terminal:
 
    ```
    python -m unittest test_analizador.py
    ```
    
-2. Para ejecutar la aplicación principal, usa:
+**Paso 2.** Para ejecutar la aplicación principal, usa:
 
    ```
    python main.py
