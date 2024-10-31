@@ -1,4 +1,4 @@
-# Práctica 8. Aplicación de Machine Learning en elsector aduanero 
+# Práctica 8. Aplicación de Machine Learning en el sector aduanero 
 
 ## Objetivo de la práctica:
 
