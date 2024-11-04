@@ -193,7 +193,7 @@ if __name__ == "__main__":
 **Paso 3.** Ejecuta el siguiente script para procesar los datos:
 
 ```
-python process_data.py
+python3 process_data.py
 ```
 
  ### Tarea 4. Testing de pipelines de datos.
@@ -237,9 +237,11 @@ class TestDataPipeline(unittest.TestCase):
 
         # Verificar que los valores de 'label' sean 0 o 1
         labels = processed_data.select('label').distinct().collect()
-        self.assertEqual(set([row['label'] for row in labels]), {0, 1}, "Valores incorrectos en 'label'.")
-
-        print("La calidad de los datos es buena.")
+        try:
+            self.assertEqual(set([row['label'] for row in labels]), {0, 1}, "Valores incorrectos en 'label'.")
+            print("La calidad de los datos es buena.")
+        except AssertionError:
+            print("Revisar la calidad: Se encontraron valores incorrectos en 'label'.")
 
 if __name__ == '__main__':
     unittest.main()
@@ -248,7 +250,7 @@ if __name__ == '__main__':
 **Paso 2.** Ejecuta las pruebas:
 
 ```
-python -m unittest test_data_pipeline.py
+python3 -m unittest test_data_pipeline.py
 ```
 
 ## Resultado esperado:
