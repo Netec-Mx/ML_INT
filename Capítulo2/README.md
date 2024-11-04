@@ -36,21 +36,21 @@ from datetime import datetime, timedelta
 def generate_sample_data(n_users=1000, n_products=100, n_interactions=10000):
     np.random.seed(42)
     
-     Generar usuarios
+    # Generar usuarios
     users = pd.DataFrame({
         'user_id': range(1, n_users + 1),
         'age': np.random.randint(18, 70, n_users),
         'gender': np.random.choice(['M', 'F'], n_users)
     })
     
-     Generar productos
+    # Generar productos
     products = pd.DataFrame({
         'product_id': range(1, n_products + 1),
         'category': np.random.choice(['Electronics', 'Clothing', 'Books', 'Home'], n_products),
         'price': np.random.uniform(10, 1000, n_products).round(2)
     })
     
-     Generar interacciones
+    # Generar interacciones
     interactions = pd.DataFrame({
         'user_id': np.random.choice(users['user_id'], n_interactions),
         'product_id': np.random.choice(products['product_id'], n_interactions),
@@ -59,9 +59,9 @@ def generate_sample_data(n_users=1000, n_products=100, n_interactions=10000):
     })
     
     return users, products, interactions
- Generar datos
+# Generar datos
 users, products, interactions = generate_sample_data()
- Guardar datos en archivos CSV
+# Guardar datos en archivos CSV
 users.to_csv('users.csv', index=False)
 products.to_csv('products.csv', index=False)
 interactions.to_csv('interactions.csv', index=False)
@@ -83,11 +83,11 @@ import pandas as pd
 def label_interactions(interactions_df):
     interactions_df['label'] = (interactions_df['interaction_type'] == 'purchase').astype(int)
     return interactions_df
- Cargar datos de interacciones
+# Cargar datos de interacciones
 interactions = pd.read_csv('interactions.csv')
- Etiquetar datos
+# Etiquetar datos
 labeled_interactions = label_interactions(interactions)
- Guardar datos etiquetados
+# Guardar datos etiquetados
 labeled_interactions.to_csv('labeled_interactions.csv', index=False)
 print("Datos etiquetados y guardados en labeled_interactions.csv")
 ```
@@ -134,41 +134,60 @@ pip install pyspark
 ```python
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
+import sys
+
 def process_data(spark):
-     Cargar datos
-    users = spark.read.csv('users.csv', header=True, inferSchema=True)
-    products = spark.read.csv('products.csv', header=True, inferSchema=True)
-    interactions = spark.read.csv('labeled_interactions.csv', header=True, inferSchema=True)
-     Unir datos
-    data = interactions.join(users, on='user_id').join(products, on='product_id')
-     Procesar datos
-    processed_data = data.withColumn(
-        'age_group',
-        when(col('age') < 30, 'young')
-        .when((col('age') >= 30) & (col('age') < 50), 'middle')
-        .otherwise('senior')
-    ).withColumn(
-        'price_category',
-        when(col('price') < 50, 'low')
-        .when((col('price') >= 50) & (col('price') < 200), 'medium')
-        .otherwise('high')
-    )
-     Seleccionar columnas relevantes
-    final_data = processed_data.select(
-        'user_id', 'product_id', 'age_group', 'gender', 'category', 
-        'price_category', 'interaction_type', 'label'
-    )
-    return final_data
+    try:
+        # Cargar datos
+        users = spark.read.csv('users.csv', header=True, inferSchema=True)
+        products = spark.read.csv('products.csv', header=True, inferSchema=True)
+        interactions = spark.read.csv('labeled_interactions.csv', header=True, inferSchema=True)
+        
+        # Unir datos
+        data = interactions.join(users, on='user_id').join(products, on='product_id')
+        
+        # Procesar datos
+        processed_data = data.withColumn(
+            'age_group',
+            when(col('age') < 30, 'young')
+            .when((col('age') >= 30) & (col('age') < 50), 'middle')
+            .otherwise('senior')
+        ).withColumn(
+            'price_category',
+            when(col('price') < 50, 'low')
+            .when((col('price') >= 50) & (col('price') < 200), 'medium')
+            .otherwise('high')
+        )
+        
+        # Seleccionar columnas relevantes
+        final_data = processed_data.select(
+            'user_id', 'product_id', 'age_group', 'gender', 'category', 
+            'price_category', 'interaction_type', 'label'
+        )
+        return final_data
+
+    except Exception as e:
+        print("Error procesando los datos:", e, file=sys.stderr)
+        sys.exit(1)
+
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("DataProcessing").getOrCreate()
     
-    processed_data = process_data(spark)
-    
-     Guardar datos procesados
-    processed_data.write.csv('processed_data.csv', header=True, mode='overwrite')
-    
-    spark.stop()
-print("Datos procesados y guardados en processed_data.csv")
+    # Configurar nivel de registro
+    spark.sparkContext.setLogLevel("ERROR")
+
+    try:
+        processed_data = process_data(spark)
+        
+        # Guardar datos procesados
+        processed_data.write.csv('processed_data.csv', header=True, mode='overwrite')
+        
+        print("Datos procesados y guardados en processed_data.csv")
+
+    except Exception as e:
+        print("Error ejecutando el proceso:", e, file=sys.stderr)
+    finally:
+        spark.stop()
 ```
 
 **Paso 3.** Ejecuta el siguiente script para procesar los datos:
@@ -194,19 +213,19 @@ class TestDataPipeline(unittest.TestCase):
         cls.spark.stop()
     def test_process_data(self):
         processed_data = process_data(self.spark)
-         Verificar que el DataFrame no esté vacío
+        # Verificar que el DataFrame no esté vacío
         self.assertTrue(processed_data.count() > 0)
-         Verificar que todas las columnas esperadas estén presentes
+        # Verificar que todas las columnas esperadas estén presentes
         expected_columns = {'user_id', 'product_id', 'age_group', 'gender', 'category', 
                             'price_category', 'interaction_type', 'label'}
         self.assertEqual(set(processed_data.columns), expected_columns)
-         Verificar que los valores de 'age_group' sean correctos
+        # Verificar que los valores de 'age_group' sean correctos
         age_groups = processed_data.select('age_group').distinct().collect()
         self.assertEqual(set([row['age_group'] for row in age_groups]), {'young', 'middle', 'senior'})
-         Verificar que los valores de 'price_category' sean correctos
+        # Verificar que los valores de 'price_category' sean correctos
         price_categories = processed_data.select('price_category').distinct().collect()
         self.assertEqual(set([row['price_category'] for row in price_categories]), {'low', 'medium', 'high'})
-         Verificar que los valores de 'label' sean 0 o 1
+        # Verificar que los valores de 'label' sean 0 o 1
         labels = processed_data.select('label').distinct().collect()
         self.assertEqual(set([row['label'] for row in labels]), {0, 1})
 if __name__ == '__main__':
