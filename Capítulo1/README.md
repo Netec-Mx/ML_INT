@@ -15,7 +15,7 @@ Al finalizar la práctica, serás capaz de:
 
 ## Datos de entrada:
 
-Los datos de ventas se proporcionarán en un archivo de texto (ventas_mensuales.txt) con el siguiente formato:
+Los datos de ventas se proporcionarán en un archivo de texto **(ventas_mensuales.txt)** con el siguiente formato:
 
 ```
 fecha,monto
@@ -68,7 +68,7 @@ class AnalizadorVentas:
         """
         self.ventas = []
         with open(nombre_archivo, 'r') as archivo:
-            next(archivo)   Saltar la primera línea (encabezados)
+            next(archivo)   # Saltar la primera línea (encabezados)
             for linea in archivo:
                 fecha, monto = linea.strip().split(',')
                 self.ventas.append((datetime.strptime(fecha, "%Y-%m-%d"), float(monto)))
@@ -118,37 +118,49 @@ from analizador import AnalizadorVentas
 import tempfile
 import os
 from datetime import datetime
+
 class TestAnalizadorVentas(unittest.TestCase):
     def setUp(self):
         self.analizador = AnalizadorVentas()
-        self.archivo_temporal = tempfile.NamedTemporaryFile(delete=False)
+        self.archivo_temporal = tempfile.NamedTemporaryFile(delete=False, mode='w', newline='')
         with open(self.archivo_temporal.name, 'w') as f:
             f.write("fecha,monto\n")
             f.write("2024-01-01,1500.50\n")
             f.write("2024-01-02,2300.75\n")
             f.write("2024-01-03,1800.25\n")
+
     def tearDown(self):
-        os.unlink(self.archivo_temporal.name)
+        try:
+            self.archivo_temporal.close()  # Cerrar el archivo si aún está abierto
+            os.unlink(self.archivo_temporal.name)  # Eliminar el archivo
+        except Exception as e:
+            print(f"Error al eliminar el archivo temporal: {e}")
+
     def test_cargar_datos(self):
         self.analizador.cargar_datos(self.archivo_temporal.name)
         self.assertEqual(len(self.analizador.ventas), 3)
+
     def test_calcular_total_ventas(self):
         self.analizador.cargar_datos(self.archivo_temporal.name)
         self.assertAlmostEqual(self.analizador.calcular_total_ventas(), 5601.50, places=2)
+
     def test_calcular_promedio_diario(self):
         self.analizador.cargar_datos(self.archivo_temporal.name)
         self.assertAlmostEqual(self.analizador.calcular_promedio_diario(), 1867.17, places=2)
+
     def test_identificar_dia_mayor_venta(self):
         self.analizador.cargar_datos(self.archivo_temporal.name)
         dia_mayor_venta, monto_mayor_venta = self.analizador.identificar_dia_mayor_venta()
         self.assertEqual(dia_mayor_venta, datetime(2024, 1, 2))
         self.assertAlmostEqual(monto_mayor_venta, 2300.75, places=2)
+
     def test_generar_informe(self):
         self.analizador.cargar_datos(self.archivo_temporal.name)
         informe = self.analizador.generar_informe()
         self.assertIn("Total de ventas: $5601.50", informe)
         self.assertIn("Promedio de ventas diarias: $1867.17", informe)
         self.assertIn("Día con mayores ventas: 2024-01-02 ($2300.75)", informe)
+
 if __name__ == '__main__':
     unittest.main()
 ```
