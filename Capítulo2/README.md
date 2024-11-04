@@ -204,30 +204,43 @@ python process_data.py
 import unittest
 from pyspark.sql import SparkSession
 from process_data import process_data
+
 class TestDataPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.spark = SparkSession.builder.appName("TestDataProcessing").getOrCreate()
+
     @classmethod
     def tearDownClass(cls):
         cls.spark.stop()
+
     def test_process_data(self):
         processed_data = process_data(self.spark)
+        
         # Verificar que el DataFrame no esté vacío
-        self.assertTrue(processed_data.count() > 0)
+        self.assertTrue(processed_data.count() > 0, "El DataFrame está vacío.")
+
         # Verificar que todas las columnas esperadas estén presentes
         expected_columns = {'user_id', 'product_id', 'age_group', 'gender', 'category', 
                             'price_category', 'interaction_type', 'label'}
-        self.assertEqual(set(processed_data.columns), expected_columns)
+        self.assertEqual(set(processed_data.columns), expected_columns, "Faltan columnas esperadas.")
+
         # Verificar que los valores de 'age_group' sean correctos
         age_groups = processed_data.select('age_group').distinct().collect()
-        self.assertEqual(set([row['age_group'] for row in age_groups]), {'young', 'middle', 'senior'})
+        self.assertEqual(set([row['age_group'] for row in age_groups]), {'young', 'middle', 'senior'}, 
+                         "Valores incorrectos en 'age_group'.")
+
         # Verificar que los valores de 'price_category' sean correctos
         price_categories = processed_data.select('price_category').distinct().collect()
-        self.assertEqual(set([row['price_category'] for row in price_categories]), {'low', 'medium', 'high'})
+        self.assertEqual(set([row['price_category'] for row in price_categories]), {'low', 'medium', 'high'}, 
+                         "Valores incorrectos en 'price_category'.")
+
         # Verificar que los valores de 'label' sean 0 o 1
         labels = processed_data.select('label').distinct().collect()
-        self.assertEqual(set([row['label'] for row in labels]), {0, 1})
+        self.assertEqual(set([row['label'] for row in labels]), {0, 1}, "Valores incorrectos en 'label'.")
+
+        print("La calidad de los datos es buena.")
+
 if __name__ == '__main__':
     unittest.main()
 ```
