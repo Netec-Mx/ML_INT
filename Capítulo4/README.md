@@ -27,43 +27,72 @@ Desarrollar un modelo de clasificación para reconocer dígitos escritos a mano 
 
 **Paso 1.** Primero, vamos a instalar las bibliotecas necesarias y preparar nuestros datos.
 
-```bash
-pip install tensorflow numpy matplotlib scikit-learn
+**NOTA:** Abre la aplicación de **Microsoft Store** y busca el software de **python** elige la version **Python 3.10** e instalala en la maquina virtual. Reinicia Visual Studio Code.
+
+```
+py -3.10 -m venv tf-env
+.\tf-env\Scripts\activate
+pip install tensorflow numpy matplotlib scikit-learn seaborn
 ```
 
 **Paso 2.** Ahora, crea un archivo `prepare_data.py`:
 
-```python
+```
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
- Cargar el conjunto de datos MNIST
-(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
- Normalizar los datos
-X_train = X_train.astype('float32') / 255
-X_test = X_test.astype('float32') / 255
- Reshape para que sea compatible con la entrada de la red neuronal
-X_train = X_train.reshape(X_train.shape[0], 28, 28, 1)
-X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
- Guardar los datos procesados
-np.save('X_train.npy', X_train)
-np.save('X_test.npy', X_test)
-np.save('y_train.npy', y_train)
-np.save('y_test.npy', y_test)
- Visualizar algunas imágenes de ejemplo
-fig, axes = plt.subplots(2, 5, figsize=(12, 5))
-for i, ax in enumerate(axes.flat):
-    ax.imshow(X_train[i].reshape(28, 28), cmap='gray')
-    ax.set_title(f"Dígito: {y_train[i]}")
-    ax.axis('off')
-plt.tight_layout()
-plt.savefig('ejemplos_mnist.png')
-plt.close()
-print("Datos preparados y guardados. Ejemplos visualizados en 'ejemplos_mnist.png'.")
+import os
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+
+def load_and_prepare_data():
+    try:
+        # Cargar el conjunto de datos MNIST
+        (X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+        # Normalizar los datos
+        X_train = X_train.astype('float32') / 255
+        X_test = X_test.astype('float32') / 255
+
+        # Reshape para que sea compatible con la entrada de la red neuronal
+        X_train = X_train.reshape(X_train.shape[0], 28, 28, 1)
+        X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
+
+        # Guardar los datos procesados
+        np.save('X_train.npy', X_train)
+        np.save('X_test.npy', X_test)
+        np.save('y_train.npy', y_train)
+        np.save('y_test.npy', y_test)
+        
+        print("Datos preparados y guardados correctamente.")
+        return X_train, y_train
+    except Exception as e:
+        print(f"Ocurrió un error al preparar los datos: {e}")
+        return None, None
+
+def visualize_samples(X, y, num_samples=10, filename="ejemplos_mnist.png"):
+    try:
+        fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+        for i, ax in enumerate(axes.flat):
+            ax.imshow(X[i].reshape(28, 28), cmap='gray')
+            ax.set_title(f"Dígito: {y[i]}")
+            ax.axis('off')
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
+        print(f"Ejemplos visualizados en '{filename}'.")
+    except Exception as e:
+        print(f"Ocurrió un error al visualizar las imágenes: {e}")
+
+# Ejecutar funciones
+X_train, y_train = load_and_prepare_data()
+if X_train is not None and y_train is not None:
+    visualize_samples(X_train, y_train)
 ```
 **Paso 2.** Ejecuta el script para preparar los datos:
 
-```bash
+```
 python prepare_data.py
 ```
 
@@ -71,18 +100,20 @@ python prepare_data.py
 
 **Paso 1.** Crea un archivo `train_model.py`:
 
-```python
+```
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
- Cargar datos
+
+# Cargar datos
 X_train = np.load('X_train.npy')
 X_test = np.load('X_test.npy')
 y_train = np.load('y_train.npy')
 y_test = np.load('y_test.npy')
- Definir el modelo
+
+# Definir el modelo
 model = Sequential([
     Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
     MaxPooling2D((2, 2)),
@@ -93,23 +124,27 @@ model = Sequential([
     Dropout(0.5),
     Dense(10, activation='softmax')
 ])
- Compilar el modelo
+
+# Compilar el modelo
 model.compile(optimizer=Adam(),
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
- Entrenar el modelo
+
+# Entrenar el modelo
 history = model.fit(X_train, y_train, epochs=10, validation_split=0.2, batch_size=128)
- Evaluar el modelo
+
+# Evaluar el modelo
 test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
 print(f"Precisión en el conjunto de prueba: {test_acc:.4f}")
- Guardar el modelo
+
+# Guardar el modelo
 model.save('mnist_model.h5')
 print("Modelo entrenado y guardado como 'mnist_model.h5'.")
 ```
 
 **Paso 2.** Ejecuta el script siguiente para entrenar el modelo inicial:
 
-```bash
+```
 python train_model.py
 ```
 
@@ -119,18 +154,20 @@ Ahora, vamos a implementar algunas técnicas de debugging para identificar posib
 
 **Paso 1.** Crea un archivo `debug_model.py`:
 
-```python
+```
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
- Cargar datos y modelo
+
+# Cargar datos y modelo
 X_train = np.load('X_train.npy')
 X_test = np.load('X_test.npy')
 y_train = np.load('y_train.npy')
 y_test = np.load('y_test.npy')
 model = load_model('mnist_model.h5')
- 1. Visualizar la distribución de las predicciones
+
+#Visualizar la distribución de las predicciones
 y_pred = model.predict(X_test)
 plt.hist(np.argmax(y_pred, axis=1), bins=10)
 plt.title('Distribución de predicciones')
@@ -138,7 +175,8 @@ plt.xlabel('Dígito')
 plt.ylabel('Frecuencia')
 plt.savefig('distribucion_predicciones.png')
 plt.close()
- 2. Visualizar la matriz de confusión
+
+# Visualizar la matriz de confusión
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 cm = confusion_matrix(y_test, np.argmax(y_pred, axis=1))
@@ -149,7 +187,8 @@ plt.xlabel('Predicción')
 plt.ylabel('Valor Real')
 plt.savefig('matriz_confusion.png')
 plt.close()
- 3. Analizar ejemplos mal clasificados
+
+# Analizar ejemplos mal clasificados
 misclassified = np.where(np.argmax(y_pred, axis=1) != y_test)[0]
 fig, axes = plt.subplots(3, 3, figsize=(12, 12))
 for i, ax in enumerate(axes.flat):
@@ -166,7 +205,7 @@ print("Análisis de debugging completado. Revisa las imágenes generadas.")
 
 **Paso 2.** Ejecuta el script de debugging:
 
-```bash
+```
 python debug_model.py
 ```
 
@@ -176,19 +215,21 @@ Basándonos en los resultados del debugging, vamos a implementar algunas mejoras
 
 **Paso 1.** Crea un archivo `improve_model.py`:
 
-```python
+```
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
- Cargar datos
+
+# Cargar datos
 X_train = np.load('X_train.npy')
 X_test = np.load('X_test.npy')
 y_train = np.load('y_train.npy')
 y_test = np.load('y_test.npy')
- Definir el modelo mejorado
+
+# Definir el modelo mejorado
 model = Sequential([
     Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
     BatchNormalization(),
@@ -206,37 +247,42 @@ model = Sequential([
     Dropout(0.5),
     Dense(10, activation='softmax')
 ])
- Compilar el modelo
+
+# Compilar el modelo
 model.compile(optimizer=Adam(learning_rate=0.001),
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
- Definir callbacks
+
+# Definir callbacks
 early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
 lr_reducer = ReduceLROnPlateau(factor=0.5, patience=5)
- Entrenar el modelo
+
+# Entrenar el modelo
 history = model.fit(X_train, y_train, epochs=50, validation_split=0.2, batch_size=128,
                     callbacks=[early_stopping, lr_reducer])
- Evaluar el modelo
+
+# Evaluar el modelo
 test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
 print(f"Precisión en el conjunto de prueba: {test_acc:.4f}")
- Guardar el modelo mejorado
+
+# Guardar el modelo mejorado
 model.save('mnist_model_improved.h5')
 print("Modelo mejorado entrenado y guardado como 'mnist_model_improved.h5'.")
 ```
 
 **Paso 2.** Ejecuta el script para entrenar el modelo mejorado:
 
-```bash
+```
 python improve_model.py
 ```
 
- ### Tarea 5. Hipertuning.
+### Tarea 5. Hipertuning.
  
 Finalmente, vamos a realizar un ajuste de hiperparámetros utilizando Keras Tuner. 
 
 **Paso 1.** Crea un archivo `hypertune_model.py`:
 
-```python
+```
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -244,11 +290,13 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropou
 from tensorflow.keras.optimizers import Adam
 from kerastuner import RandomSearch
 from kerastuner.engine.hyperparameters import HyperParameters
- Cargar datos
+
+# Cargar datos
 X_train = np.load('X_train.npy')
 X_test = np.load('X_test.npy')
 y_train = np.load('y_train.npy')
 y_test = np.load('y_test.npy')
+
 def build_model(hp):
     model = Sequential()
     model.add(Conv2D(hp.Int('conv1_units', min_value=32, max_value=128, step=32),
@@ -289,17 +337,19 @@ best_model = tuner.get_best_models(num_models=1)[0]
 best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
 print("Mejores hiperparámetros encontrados:")
 print(best_hyperparameters.values)
- Evaluar el mejor modelo
+
+# Evaluar el mejor modelo
 test_loss, test_acc = best_model.evaluate(X_test, y_test, verbose=0)
 print(f"Precisión en el conjunto de prueba con el mejor modelo: {test_acc:.4f}")
- Guardar el mejor modelo
+
+# Guardar el mejor modelo
 best_model.save('mnist_model_best.h5')
 print("Mejor modelo guardado como 'mnist_model_best.h5'.")
 ```
 
 **Paso 2.** Ejecuta el script para realizar el hipertuning:
 
-```bash
+```
 python hypertune_model.py
 ```
 
