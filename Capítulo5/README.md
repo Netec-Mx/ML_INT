@@ -61,9 +61,9 @@ Imagina que estás trabajando en un proyecto para clasificar imágenes de perros
 
 Primero, implementaremos un modelo simple usando TensorFlow/Keras. 
 
-**Paso 1.** Crea un archivo `src/models/train_model.py`:
+**Paso 1.** Crea un archivo `src/models/train_model.py`, primero crea la carpeta `src` luego la carpeta `models` y finalmente dentro crea el archivo `train_model.py`:
 
-```python
+```
 import tensorflow as tf
 from tensorflow.keras import layers, models
 def create_model():
@@ -85,16 +85,16 @@ def train_model(model, train_data, validation_data):
     history = model.fit(train_data, epochs=10, validation_data=validation_data)
     return history
 if __name__ == "__main__":
-     Aquí iría el código para cargar los datos y entrenar el modelo
+    # Aquí iría el código para cargar los datos y entrenar el modelo
     pass
 ```
 ### Tarea 2. Implementación de tests.
 
 Ahora, crearemos algunos tests básicos. 
 
-**Paso 1.** Crea un archivo `tests/test_model.py`:
+**Paso 1.** Crea un archivo `tests/test_model.py`, dentro de la misma carpeta `models` crea la carpeta `tests` y ahi agrega el archivo `test_model.py`:
 
-```python
+```
 import unittest
 import tensorflow as tf
 from src.models.train_model import create_model
@@ -116,9 +116,9 @@ if __name__ == '__main__':
 
 El ML Test Score es una métrica para evaluar la madurez y la calidad de un sistema de ML. Durante esta tarea, implementaremos una versión simplificada. 
 
-**Paso 1.** Crea un archivo `src/evaluation/ml_test_score.py`:
+**Paso 1.** Crea un archivo `src/evaluation/ml_test_score.py`, dentro de la carpeta `src` crea una nueva llamada `evaluation` y adentro crea el archivo `ml_test_score.py`:
 
-```python
+```
 def calculate_ml_test_score(model, data_tests, model_tests, monitoring):
     score = 0
     if all(data_tests):
@@ -127,7 +127,7 @@ def calculate_ml_test_score(model, data_tests, model_tests, monitoring):
         score += 1
     if monitoring:
         score += 1
-    return score / 3   Normalizado a un rango de 0 a 1
+    return score / 3  # Normalizado a un rango de 0 a 1
 ```
 
 #### Ejemplo de uso
@@ -144,7 +144,7 @@ print(f"ML Test Score: {ml_score}")
 
 Finalmente, configuraremos un pipeline de CI básico usando GitHub Actions. 
 
-**Paso 1.** Crea un archivo `.github/workflows/ci.yml`:
+**Paso 1.** Crea un archivo `.github/workflows/ci.yml`, dentro de la carpeta `src` agrega el directorio `.github`, adentro agrega la carpeta `workflows`y finalmente el archivo `ci.yml`:
 
 ```yaml
 name: CI
