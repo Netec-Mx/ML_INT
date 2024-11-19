@@ -23,187 +23,185 @@ Tu tarea es desplegar este modelo como un servicio de predicción y configurar u
 
 ## Instrucciones 
 
-### Tarea 1. Preparación del modelo.
+### Tarea 0. Instalción de dependencias y descarga del dataset.
+
+**Paso 1.** Instala las siguientes librerias para el entorno.
+
+```
+pip install pandas numpy scikit-learn flask prometheus-client
+```
+
+**Paso 2.** Descarga el conjunto de datos desde el siguiente enlace.
+
+```
+https://files.grouplens.org/datasets/movielens/ml-100k.zip
+```
+
+**Paso 3.** Una vez descargardo descomprime el archivo.
+
+**Paso 4.** En tu Visual Studio Code crea una carpeta que guardara todos los archivos, ejemplo: `Lab6`.
+
+**Paso 5.** Dentro de la carpeta agrega los siguientes directorios: `datasets/movielens/`.
+
+**Paso 6.** Dentro de la carpeta `movielens` agrega el conjunto de datos descargado y descompreso
+
+
+### Tarea 2. Preparación del modelo.
 
 Primero, vamos a crear un modelo simple de recomendación. 
 
-**Paso 1.** Crea un archivo`src/models/movie_recommender.py`:
+**Paso 1.** Crea un archivo `Lab6/train_model.py`:
 
-```python
+```
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-import joblib
-class MovieRecommender:
-    def __init__(self):
-        self.movies_df = None
-        self.tfidf_matrix = None
-        
-    def fit(self, movies_data):
-        self.movies_df = pd.DataFrame(movies_data)
-        tfidf = TfidfVectorizer(stop_words='english')
-        self.tfidf_matrix = tfidf.fit_transform(self.movies_df['description'])
-        
-    def get_recommendations(self, movie_id, top_n=5):
-        idx = self.movies_df.index[self.movies_df['id'] == movie_id].tolist()[0]
-        sim_scores = list(enumerate(cosine_similarity(self.tfidf_matrix[idx], self.tfidf_matrix)[0]))
-        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:top_n+1]
-        movie_indices = [i[0] for i in sim_scores]
-        return self.movies_df['title'].iloc[movie_indices].tolist()
-    def save_model(self, filename):
-        joblib.dump(self, filename)
-    @classmethod
-    def load_model(cls, filename):
-        return joblib.load(filename)
+import pickle
+
+# Cargar los datos
+ratings = pd.read_csv('datasets/movielens/ml-100k/u.data', sep='\t', names=['user_id', 'item_id', 'rating', 'timestamp'])
+movies = pd.read_csv('datasets/movielens/ml-100k/u.item', sep='|', encoding='latin-1', names=['item_id', 'title'], usecols=[0, 1])
+data = pd.merge(ratings, movies, on='item_id')
+
+# Crear matriz de usuarios y películas
+user_movie_matrix = data.pivot_table(index='user_id', columns='title', values='rating').fillna(0)
+similarity_matrix = cosine_similarity(user_movie_matrix)
+
+# Guardar modelo
+with open('recommendation_model.pkl', 'wb') as f:
+    pickle.dump(similarity_matrix, f)
 ```
 
-**Ejemplo de uso:**
+**Paso 2.** Ejecuta el script `train_model.py`
 
 ```
-if __name__ == "__main__":
-    movies_data = [
-        {'id': 1, 'title': 'The Shawshank Redemption', 'description': 'Two imprisoned men bond over a number of years...'},
-        {'id': 2, 'title': 'The Godfather', 'description': 'The aging patriarch of an organized crime dynasty...'},
-        {'id': 3, 'title': 'The Dark Knight', 'description': 'When the menace known as the Joker emerges from his mysterious past...'},
-         ... más películas ...
-    ]
-    
-    recommender = MovieRecommender()
-    recommender.fit(movies_data)
-    recommender.save_model('movie_recommender.joblib')
+python train_model.py
 ```
 
-### Tarea 2. Implementación del Servicio de Predicción.
+### Tarea 3. Implementación del Servicio de Predicción.
 
 Ahora, crearemos un servicio web simple utilizando Flask para servir nuestro modelo. 
 
-**Paso 1.** Crea un archivo `src/app.py`:
+**Paso 1.** Crea un archivo `Lab6/app.py` y agrega el siguiente codigo:
 
-```python
+```
 from flask import Flask, request, jsonify
-from models.movie_recommender import MovieRecommender
+import pickle
+from prometheus_client import Counter, start_http_server
+
+# Iniciar métricas
+REQUEST_COUNT = Counter('request_count', 'Número de solicitudes al API', ['method', 'endpoint'])
+
+# Configurar Flask
 app = Flask(__name__)
- Cargar el modelo al iniciar la aplicación
-model = MovieRecommender.load_model('movie_recommender.joblib')
+
+# Cargar modelo
+with open('recommendation_model.pkl', 'rb') as f:
+    similarity_matrix = pickle.load(f)
+
 @app.route('/recommend', methods=['POST'])
 def recommend():
+    REQUEST_COUNT.labels(method='POST', endpoint='/recommend').inc()
     data = request.json
-    movie_id = data['movie_id']
-    recommendations = model.get_recommendations(movie_id)
-    return jsonify({'recommendations': recommendations})
+    user_id = data['user_id']
+    recommendations = similarity_matrix[user_id].tolist()
+    return jsonify(recommendations)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    start_http_server(8001)  # Servidor para Prometheus
+    app.run(debug=True, port=5000)
 ```
 
-### Tarea 3. Configuración del monitoreo.
+**Paso 2.** Ejecuta el script `app.py`.
+
+**Paso 3.** En una terminal de **Git Bash** ejecuta el siguiente comando para enviar datos de prueba.
+
+```
+curl -X POST http://127.0.0.1:5000/recommend -H "Content-Type: application/json" -d '{"user_id": 1}'
+```
+
+### Tarea 4. Configuración del monitoreo.
 
 Para el monitoreo, utilizaremos Prometheus para recopilar métricas y Grafana para visualizarlas. 
 
-**Paso 1.** Primero, instala las dependencias necesarias:
+**Paso 1.** Primero, crea un archivo yaml para definir prometheus en la siguiente ruta: `Lab6/prometheus.yml`
 
 ```
-pip install prometheus-client flask-prometheus-metrics
-```
-
-**Paso 2.** Posteriormente, actualiza nuestro `src/app.py` para incluir métricas:
-
-```python
-from flask import Flask, request, jsonify
-from models.movie_recommender import MovieRecommender
-from prometheus_client import Counter, Histogram
-from flask_prometheus_metrics import register_metrics
-app = Flask(__name__)
- Métricas
-RECOMMENDATIONS = Counter('recommendations_total', 'Total number of recommendations made')
-RESPONSE_TIME = Histogram('recommendation_response_time_seconds', 'Response time for recommendations')
- Registrar métricas
-register_metrics(app)
-
- Cargar el modelo al iniciar la aplicación
-model = MovieRecommender.load_model('movie_recommender.joblib')
-@app.route('/recommend', methods=['POST'])
-@RESPONSE_TIME.time()
-def recommend():
-    data = request.json
-    movie_id = data['movie_id']
-    recommendations = model.get_recommendations(movie_id)
-    RECOMMENDATIONS.inc()
-    return jsonify({'recommendations': recommendations})
-if __name__ == '__main__':
-    app.run(debug=True)
-```
-
-### Tarea 4. Configuración de Prometheus.
-
-**Paso 1.** Crea un archivo `prometheus.yml`:
-
-```yaml
 global:
   scrape_interval: 15s
+
 scrape_configs:
-  - job_name: 'flask'
+  - job_name: 'flask_app'
     static_configs:
-      - targets: ['localhost:5000']
-```
-### Tarea 5. Configuración de Grafana.
-
-**Paso 1.** Instala Grafana siguiendo las instrucciones oficiales para tu sistema operativo. <br>
-**Paso 2.** Configura Prometheus como fuente de datos en Grafana. <br>
-**Paso 3.** Crea un dashboard con gráficos para las métricas `recommendations_total` y `recommendation_response_time_seconds`.
-
-### Tarea 6. Despliegue.
-
-Para desplegar nuestro servicio, utilizaremos Docker. 
-
-**Paso 1.** Crea un `Dockerfile`:
-
-```dockerfile
-FROM python:3.8-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY src/ .
-COPY movie_recommender.joblib .
-CMD ["python", "app.py"]
+      - targets: ['localhost:8001']
 ```
 
-**Paso 2.** Crea un archivo `docker-compose.yml`:
+**Paso 2.** Posteriormente, en la misma ruta crea el siguiente archivo: `Lab6/docker-compose.yml`
 
-```yaml
-version: '3'
+```
+version: '3.7'
 services:
-  recommender:
-    build: .
-    ports:
-      - "5000:5000"
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:latest
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
     ports:
       - "3000:3000"
+    depends_on:
+      - prometheus
 ```
 
- ### Tarea 7. Ejecución y pruebas.
+**Paso 3.** Ejecuta el comando de docker.
 
-**Paso 1.** Construye y ejecuta los contenedores:
+```
+docker-compose up -d
+```
 
-   ```
-   docker-compose up --build
-   ```
+**NOTA:** Si te sale un error es porque no esta instalado docker, [Download Docker](https://docs.docker.com/desktop/setup/install/windows-install/)
 
-**Paso 2.** Prueba el servicio de recomendación:
+### Tarea 5. Configuración de Grafana.
 
-   ```
-   curl -X POST -H "Content-Type: application/json" -d '{"movie_id": 1}' http://localhost:5000/recommend
-   ```
+**Paso 1.** Acceder a Grafana en `http://localhost:3000` en una pestaña nueva de tu navegador:
 
-**Paso 3.** Accede a Grafana en `http://localhost:3000` y configura el dashboard para visualizar las métricas.
+**Paso 2.** Si te pide usuario y contraseña a todas las opciones puedes escribir `admin`
+
+**Paso 3.** En la pantalla principal de Grafana da clic en la opción **Data Sources**.
+
+**Paso 4.** Selecciona la oción de **Prometheus**.
+
+**Paso 5.** En la sección de **Connection** escribe: `http://prometheus:9090` para enlazar grafana con prometheus.
+
+**Paso 6.** Al final de la pagina da clic en el botón **Save & test**.
+
+**Paso 7.** Ahora hasta arriba esquina superior derecha de la pagina de prometheus en grafana da clic en **Build a Dashboard**.
+
+**Paso 8.** Ahora clic en **Add visualization**
+
+**Paso 9.** Selecciona **Prometheus**
+
+**Paso 10.** En el panel lateral derecho en la opción **Title** y escribe `request_count`
+
+
+### Tarea 6. Ejecución y pruebas.
+
+**Paso 1.** De vuelta a tu Visual Studio Code en alguna terminal que tengas abierta escribe `python` para activar el shell interactivo.
+
+**Paso 2.** Dentro del shell interactivo escribe el siguiente codigo que lanzara pruebas.
+
+```
+import requests
+
+for i in range(10):
+    requests.post("http://127.0.0.1:5000/recommend", json={"user_id": i})
+```
+
+**Paso 2.** Regresa a tu grafico en Grafana para visualizar tus metricas da clic en la opción **Metric** del panel inferior de tu dashboard y selecciona **scrape_duration_seconds**
+
+**Paso 3.** Un poco mas a la derecha donde seleccionaste la metrica esta la opción **Run queries** da clic y veras la grafica actualizada.
 
 ## Resultado esperado:
 
