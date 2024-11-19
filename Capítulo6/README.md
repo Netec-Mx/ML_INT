@@ -46,7 +46,7 @@ https://files.grouplens.org/datasets/movielens/ml-100k.zip
 **Paso 6.** Dentro de la carpeta `movielens` agrega el conjunto de datos descargado y descompreso
 
 
-### Tarea 2. Preparación del modelo.
+### Tarea 1. Preparación del modelo.
 
 Primero, vamos a crear un modelo simple de recomendación. 
 
@@ -78,7 +78,7 @@ with open('recommendation_model.pkl', 'wb') as f:
 python train_model.py
 ```
 
-### Tarea 3. Implementación del Servicio de Predicción.
+### Tarea 2. Implementación del Servicio de Predicción.
 
 Ahora, crearemos un servicio web simple utilizando Flask para servir nuestro modelo. 
 
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 curl -X POST http://127.0.0.1:5000/recommend -H "Content-Type: application/json" -d '{"user_id": 1}'
 ```
 
-### Tarea 4. Configuración del monitoreo.
+### Tarea 3. Configuración del monitoreo.
 
 Para el monitoreo, utilizaremos Prometheus para recopilar métricas y Grafana para visualizarlas. 
 
@@ -163,7 +163,7 @@ docker-compose up -d
 
 **NOTA:** Si te sale un error es porque no esta instalado docker, [Download Docker](https://docs.docker.com/desktop/setup/install/windows-install/)
 
-### Tarea 5. Configuración de Grafana.
+### Tarea 4. Configuración de Grafana.
 
 **Paso 1.** Acceder a Grafana en `http://localhost:3000` en una pestaña nueva de tu navegador:
 
@@ -186,7 +186,7 @@ docker-compose up -d
 **Paso 10.** En el panel lateral derecho en la opción **Title** y escribe `request_count`
 
 
-### Tarea 6. Ejecución y pruebas.
+### Tarea 5. Ejecución y pruebas.
 
 **Paso 1.** De vuelta a tu Visual Studio Code en alguna terminal que tengas abierta escribe `python` para activar el shell interactivo.
 
