@@ -281,7 +281,7 @@ def test_model():
 
 **Paso 8.** Documentación.
 
-5. Crea un documento de modelo (`model_card.md`):
+5. Crea un documento de modelo (`src/model_card.md`):
 
 ```
 # Model Card: Fraud Detection System
