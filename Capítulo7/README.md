@@ -13,6 +13,12 @@ Al finalizar la práctica, serás capaz de:
 
 - 30 minutos.
 
+## Prerrequisitos
+
+- Debes tener una cuenta activa de GITHUB o en su defecto crear una, **antes de iniciar la practica**
+- Crear un repositorio privado llamado **intmllab7**
+- **Clonar** el repositorio en tu ambiente de Visual Studio Code
+  
 ## Problema a desarrollar:
 
 **Sistema de Detección de Fraude en Transacciones Bancarias.**
@@ -23,23 +29,70 @@ Imagina que trabajas para un banco que está desarrollando un sistema de detecci
 
 ### Fase 1: Development.
 
+**Paso 0.** En raíz del directorio en que vayas a trabjar crea el archivo `requirements.txt` con las siguientes librerías necesarias.
+
+```
+# Librerías principales
+pandas
+numpy
+scikit-learn
+joblib
+
+# MLflow para seguimiento de experimentos
+mlflow
+
+# Flask para servir el modelo como API
+Flask
+
+# Prometheus para monitoreo
+prometheus-client
+flask-prometheus-metrics
+
+# Schedule para tareas periódicas
+schedule
+
+# Pytest para pruebas
+pytest
+pytest-flask
+```
+
+- Crear el archivo `data/transactions.csv`:
+
+```
+is_fraud,amount,time_since_last_transaction,risk_score
+0,100.50,24,0.1
+1,7500.00,2,0.9
+0,200.30,48,0.2
+1,15000.00,1,0.95
+0,320.00,36,0.15
+1,10000.00,0.5,0.85
+0,180.25,60,0.05
+1,5000.50,0.3,0.9
+0,250.75,72,0.12
+1,20000.00,0.1,0.99
+``` 
+
 **Paso 1.** Definición del problema y planificación.
 
 1. Crea un documento de especificación del proyecto (`project_spec.md`):
 
-```markdown
- Proyecto de Detección de Fraude
- Objetivo
+```
+# Proyecto de Detección de Fraude
+
+## Objetivo
 Desarrollar un sistema de ML para detectar transacciones fraudulentas en tiempo real.
- Métricas de Éxito
+
+## Métricas de Éxito
 - Precision mínima del 95%
 - Recall mínimo del 90%
 - Tiempo de respuesta < 100ms por transacción
- Consideraciones Éticas
+
+## Consideraciones Éticas
 - Minimizar falsos positivos para evitar inconvenientes a clientes legítimos
 - Asegurar la privacidad de los datos de los clientes
 - Evitar sesgos basados en características protegidas (edad, género, etnia, etc.)
- Stakeholders
+
+## Stakeholders
 - Equipo de ML: Desarrollo y mantenimiento del modelo
 - Equipo de Seguridad: Proporciona conocimiento del dominio y valida resultados
 - Equipo Legal: Asegura el cumplimiento de regulaciones (GDPR, etc.)
@@ -50,188 +103,269 @@ Desarrollar un sistema de ML para detectar transacciones fraudulentas en tiempo 
 
 1. Crea un script para la preparación de datos (`src/data_preparation.py`):
 
-```python
+```
+import os
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import joblib
+
 def load_and_preprocess_data(file_path):
-     Cargar datos
+    print("Cargando y procesando datos...")
+    
+    # Cargar datos
     data = pd.read_csv(file_path)
     
-     Separar características y etiquetas
-    X = data.drop('is_fraud', axis=1)
+    # Separar características y etiquetas
+    X = data[['amount', 'time_since_last_transaction', 'risk_score']]
     y = data['is_fraud']
     
-     Dividir en conjuntos de entrenamiento y prueba
+    # Dividir en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-     Escalar características
+    # Escalar características
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
-     Guardar el scaler para uso futuro
-    joblib.dump(scaler, 'models/scaler.joblib')
+    # Crear directorios si no existen
+    os.makedirs('data/processed', exist_ok=True)
+    os.makedirs('models', exist_ok=True)
     
-    return X_train_scaled, X_test_scaled, y_train, y_test
-if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = load_and_preprocess_data('data/transactions.csv')
-     Guardar los datos procesados
-    np.save('data/processed/X_train.npy', X_train)
-    np.save('data/processed/X_test.npy', X_test)
+    # Guardar datos y scaler
+    np.save('data/processed/X_train.npy', X_train_scaled)
+    np.save('data/processed/X_test.npy', X_test_scaled)
     np.save('data/processed/y_train.npy', y_train)
     np.save('data/processed/y_test.npy', y_test)
+    joblib.dump(scaler, 'models/scaler.joblib')
+    
+    print("Datos procesados guardados correctamente.")
+    return X_train_scaled, X_test_scaled, y_train, y_test
+
+if __name__ == "__main__":
+    load_and_preprocess_data('data/transactions.csv')
 ```
-**Paso 3.** Desarrollo del modelo.
+
+**Paso 3.** Pruebas Unitarias para Preparación de Datos.
+
+1. Crea el archivo (`tests/test_data_preparation.py`):
+
+```
+import pytest
+import os  # Asegurarse de importar el módulo os
+from src.data_preparation import load_and_preprocess_data
+
+def test_load_and_preprocess_data():
+    # Usar el archivo de datos correcto
+    file_path = 'data/transactions.csv'
+    assert os.path.exists(file_path), f"El archivo {file_path} no existe"
+    X_train, X_test, y_train, y_test = load_and_preprocess_data(file_path)
+    assert X_train.shape[0] > 0, "X_train debería contener datos"
+    assert y_train.shape[0] > 0, "y_train debería contener etiquetas"
+```
+
+**Paso 4.** Desarrollo del modelo.
 
 1. Crea un script para entrenar el modelo (`src/train_model.py`):
 
-```python
+```
+import os
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score, recall_score
 import joblib
 import mlflow
+
 def train_and_evaluate_model():
-     Cargar datos procesados
+    print("Iniciando entrenamiento del modelo...")
+    
+    # Cargar datos procesados
     X_train = np.load('data/processed/X_train.npy')
     X_test = np.load('data/processed/X_test.npy')
     y_train = np.load('data/processed/y_train.npy')
     y_test = np.load('data/processed/y_test.npy')
     
-     Iniciar el seguimiento de MLflow
+    # Iniciar el seguimiento de MLflow
     mlflow.set_experiment("Fraud Detection Model")
     
     with mlflow.start_run():
-         Entrenar el modelo
+        # Entrenar el modelo
         model = RandomForestClassifier(n_estimators=100, random_state=42)
         model.fit(X_train, y_train)
         
-         Evaluar el modelo
+        # Evaluar el modelo
         y_pred = model.predict(X_test)
         precision = precision_score(y_test, y_pred)
         recall = recall_score(y_test, y_pred)
         
-         Registrar métricas y parámetros
+        # Registrar métricas y guardar modelo
         mlflow.log_param("n_estimators", 100)
         mlflow.log_metric("precision", precision)
         mlflow.log_metric("recall", recall)
+        mlflow.sklearn.log_model(model, "model", input_example=X_train[:1])
         
-         Guardar el modelo
-        mlflow.sklearn.log_model(model, "model")
-        
+        # Guardar el modelo
+        model_path = 'models/fraud_detection_model.joblib'
+        joblib.dump(model, model_path)
+        print(f"Modelo guardado en: {model_path}")
         print(f"Precision: {precision:.4f}")
         print(f"Recall: {recall:.4f}")
-    
-    return model
+        return model
+
 if __name__ == "__main__":
+    train_and_evaluate_model()
+```
+
+**Paso 5.** Pruebas para Entrenamiento de Modelo.
+
+1. Crea el archivo (`tests/test_train_model.py`):
+
+```
+import os
+from src.train_model import train_and_evaluate_model
+
+def test_train_and_evaluate_model():
     model = train_and_evaluate_model()
-    joblib.dump(model, 'models/fraud_detection_model.joblib')
+    assert os.path.exists('models/fraud_detection_model.joblib'), "El modelo debería guardarse correctamente"
+    assert model is not None, "El modelo debería entrenarse correctamente"
 ```
 
 ### Fase 2. Delivery.
 
-**Paso 4.** Pruebas y validación.
+**Paso 6.** Validación del modelo.
 
-1. Crea un script para realizar pruebas adicionales (`src/model_testing.py`):
+1. Crea un script (`src/model_testing.py`):
 
-```python
+```
 import joblib
 import numpy as np
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import classification_report
+
 def test_model():
-     Cargar el modelo y los datos de prueba
     model = joblib.load('models/fraud_detection_model.joblib')
     X_test = np.load('data/processed/X_test.npy')
     y_test = np.load('data/processed/y_test.npy')
-    
-     Realizar predicciones
     y_pred = model.predict(X_test)
-    
-     Generar informe de clasificación
     report = classification_report(y_test, y_pred)
-    print("Classification Report:")
     print(report)
-    
-     Generar matriz de confusión
-    cm = confusion_matrix(y_test, y_pred)
-    print("Confusion Matrix:")
-    print(cm)
-if __name__ == "__main__":
-    test_model()
 ```
 
-**Paso 5.** Documentación.
+**Paso 7.** Pruebas de Integración
+
+1. Crea un script (`tests/test_model_testing.py`):
+
+```
+import pytest
+import joblib
+import numpy as np
+from sklearn.metrics import classification_report
+
+def test_model():
+    # Verificar que el modelo existe
+    model_path = 'models/fraud_detection_model.joblib'
+    assert joblib.load(model_path), f"El modelo no está disponible en {model_path}"
+    
+    # Cargar datos de prueba
+    X_test = np.load('data/processed/X_test.npy')
+    y_test = np.load('data/processed/y_test.npy')
+    
+    # Generar predicciones
+    model = joblib.load(model_path)
+    y_pred = model.predict(X_test)
+    
+    # Generar y validar informe de clasificación
+    report = classification_report(y_test, y_pred, output_dict=True)
+    assert 'accuracy' in report, "El informe debería contener 'accuracy'"
+```
+
+**Paso 8.** Documentación.
 
 5. Crea un documento de modelo (`model_card.md`):
 
-```markdown
- Model Card: Fraud Detection System
- Model Details
+```
+# Model Card: Fraud Detection System
+
+## Model Details
 - Developer: [Your Name]
 - Model Date: [Current Date]
 - Model Version: 1.0
 - Model Type: Random Forest Classifier
- Intended Use
+ 
+## Intended Use
 - Primary Use: Detect fraudulent transactions in real-time
 - Intended Users: Bank's fraud detection team
- Training Data
+
+## Training Data
 - Source: Historical transaction data from [Date Range]
 - Preprocessing: Standard scaling of numerical features
- Evaluation Data
+
+## Evaluation Data
 - 20% hold-out test set from the original dataset
- Ethical Considerations
+
+## Ethical Considerations
 - The model has been tested for bias against protected characteristics
 - Privacy measures are in place to protect customer data
- Caveats and Recommendations
+
+## Caveats and Recommendations
 - The model should be retrained periodically with new data
 - Human oversight is recommended for final decision-making on flagged transactions
 ```
- Paso 6: Configuración del Pipeline de CI/CD
+
+**Paso 9:** Configuración del Pipeline de CI/CD
+
 6. Crea un archivo de configuración para GitHub Actions (`.github/workflows/ci_cd.yml`):
-```yaml
+
+```
 name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Prepare data
+      run: python src/data_preparation.py  # Generar datos procesados
+
+    - name: Train model
+      run: python src/train_model.py  # Entrenar el modelo
+
+    - name: Verify model file
+      run: ls models/fraud_detection_model.joblib || echo "Model file missing!"
+
     - name: Run tests
       run: python -m pytest tests/
-    - name: Train model
-      run: python src/train_model.py
-    - name: Run additional tests
-      run: python src/model_testing.py
 ```
 
 ### Fase 3: Operations.
 
-**Paso 7.** Despliegue del modelo.
+**Paso 10.** Despliegue y monitoreo.
 
 1. Crea un script para servir el modelo (`src/serve_model.py`):
 
-```python
+```
 from flask import Flask, request, jsonify
 import joblib
 import numpy as np
+
 app = Flask(__name__)
- Cargar el modelo y el scaler
 model = joblib.load('models/fraud_detection_model.joblib')
 scaler = joblib.load('models/scaler.joblib')
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
@@ -239,60 +373,52 @@ def predict():
     scaled_features = scaler.transform(features)
     prediction = model.predict(scaled_features)[0]
     return jsonify({'fraud_prediction': int(prediction)})
-if __name__ == '__main__':
-    app.run(debug=True)
 ```
 
-**Paso 8.** Monitoreo y logging.
+**Paso 11.** Pruebas del Servicio del Modelo
 
-8. Agrega logging y monitoreo al script de servicio (`src/serve_model.py`):
+1. Crea el archivo (`tests/test_model_serving.py`):
 
-```python
-from flask import Flask, request, jsonify
-import joblib
-import numpy as np
-import logging
-from prometheus_client import Counter, Histogram
-from flask_prometheus_metrics import register_metrics
-app = Flask(__name__)
- Configurar logging
-logging.basicConfig(filename='fraud_detection.log', level=logging.INFO)
- Métricas de Prometheus
-PREDICTIONS = Counter('fraud_predictions_total', 'Total number of predictions')
-RESPONSE_TIME = Histogram('prediction_response_time_seconds', 'Response time for predictions')
- Registrar métricas
-register_metrics(app)
- Cargar el modelo y el scaler
-model = joblib.load('models/fraud_detection_model.joblib')
-scaler = joblib.load('models/scaler.joblib')
-@app.route('/predict', methods=['POST'])
-@RESPONSE_TIME.time()
-def predict():
-    data = request.json
-    features = np.array(list(data.values())).reshape(1, -1)
-    scaled_features = scaler.transform(features)
-    prediction = model.predict(scaled_features)[0]
-    PREDICTIONS.inc()
-    logging.info(f"Prediction made: {prediction}")
-    return jsonify({'fraud_prediction': int(prediction)})
-if __name__ == '__main__':
-    app.run(debug=True)
+```
+import os
+import pytest
+from src.serve_model import app
+
+@pytest.fixture(scope="module")
+def client():
+    # Verificar si el modelo existe antes de las pruebas
+    assert os.path.exists('models/fraud_detection_model.joblib'), "El modelo no está disponible en 'models/fraud_detection_model.joblib'."
+    return app.test_client()
+
+def test_predict_endpoint(client):
+    # Crear datos de prueba
+    test_data = {"feature1": 0.5, "feature2": -1.0, "feature3": 2.1}
+    
+    # Hacer una solicitud POST al endpoint /predict
+    response = client.post('/predict', json=test_data)
+    
+    # Verificar respuesta
+    assert response.status_code == 200, "El endpoint debería devolver un código 200."
+    json_data = response.get_json()
+    assert 'fraud_prediction' in json_data, "La respuesta debería contener 'fraud_prediction'."
 ```
 
-**Paso 9.** Mantenimiento y actualización.
+**Paso 12.** Mantenimiento y actualización.
 
 1. Crea un script para reentrenar el modelo periódicamente (`src/retrain_model.py`):
 
-```python
+```
 import schedule
 import time
-from train_model import train_and_evaluate_model
+from src.train_model import train_and_evaluate_model
+
 def retrain_job():
     print("Retraining model...")
     train_and_evaluate_model()
     print("Model retrained and saved.")
- Programar el reentrenamiento para que ocurra cada semana
+    
 schedule.every().monday.at("02:00").do(retrain_job)
+
 if __name__ == "__main__":
     while True:
         schedule.run_pending()
