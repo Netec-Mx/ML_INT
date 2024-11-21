@@ -27,208 +27,321 @@ Imagina que trabajas para la Aduana Nacional y te han encargado desarrollar un s
 
 **Paso 2.** Recopila un conjunto de datos de productos importados con sus descripciones y códigos SA correspondientes.
 
-**Paso 3.** Crea un archivo CSV (`data/import_data.csv`) con la siguiente estructura:
+**Paso 3.** Crea un directorio llamado **Lab8**
 
-```csv
+**Paso 4.** Ahora crea un archivo CSV (`data/import_data.csv`) con la siguiente estructura:
+
+```
 id,description,hs_code
 1,"Laptop computer, 15-inch screen, 8GB RAM, 256GB SSD",8471.30
 2,"Men's cotton t-shirt, short sleeve, blue",6109.10
 3,"Smartphone, 6.1-inch display, 128GB storage",8517.13
 ...
 ```
+
 ### Tarea 2. Preparación y análisis de datos.
 
-**Paso 1.** Crea un script (`src/data_preparation.py`) para preparar los datos:
+**Paso 1.** Crea un script (`src/data_preparation.py`) para preparar los datos, sino existe la carpeta **src** debes crearla primero:
 
-```python
+```
+import os
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 import joblib
+
 def prepare_data(file_path):
-     Cargar datos
+    # Cargar datos
     data = pd.read_csv(file_path)
     
-     Dividir en características (X) y etiquetas (y)
+    # Convertir los códigos arancelarios en categorías (str)
+    data['hs_code'] = data['hs_code'].astype(str)
+    
+    # Dividir en características (X) y etiquetas (y)
     X = data['description']
     y = data['hs_code']
     
-     Dividir en conjuntos de entrenamiento y prueba
+    # Dividir en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-     Vectorizar las descripciones usando TF-IDF
+    # Vectorizar las descripciones usando TF-IDF
     vectorizer = TfidfVectorizer(max_features=5000)
     X_train_vectorized = vectorizer.fit_transform(X_train)
     X_test_vectorized = vectorizer.transform(X_test)
     
-     Guardar el vectorizador para uso futuro
-    joblib.dump(vectorizer, 'models/tfidf_vectorizer.joblib')
+    # Crear directorios si no existen
+    os.makedirs('models', exist_ok=True)
+    os.makedirs('data/processed', exist_ok=True)
     
-    return X_train_vectorized, X_test_vectorized, y_train, y_test
-if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = prepare_data('data/import_data.csv')
-     Guardar los datos procesados
-    joblib.dump(X_train, 'data/processed/X_train.joblib')
-    joblib.dump(X_test, 'data/processed/X_test.joblib')
+    # Guardar el vectorizador y los datos procesados
+    joblib.dump(vectorizer, 'models/tfidf_vectorizer.joblib')
+    joblib.dump(X_train_vectorized, 'data/processed/X_train.joblib')
+    joblib.dump(X_test_vectorized, 'data/processed/X_test.joblib')
     joblib.dump(y_train, 'data/processed/y_train.joblib')
     joblib.dump(y_test, 'data/processed/y_test.joblib')
+
+if __name__ == "__main__":
+    prepare_data('data/import_data.csv')
+```
+
+**Paso 2.** Ejecuta el escript
+
+```
+python src/data_preparation.py
 ```
 
 ### Tarea 3. Desarrollo del modelo.
 
 **Paso 1.** Crea un script (`src/train_model.py`) para entrenar el modelo:
 
-```python
+```
+import os
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 import mlflow
+
 def train_and_evaluate_model():
-     Cargar datos procesados
+    # Cargar datos procesados
     X_train = joblib.load('data/processed/X_train.joblib')
     X_test = joblib.load('data/processed/X_test.joblib')
     y_train = joblib.load('data/processed/y_train.joblib')
     y_test = joblib.load('data/processed/y_test.joblib')
     
-     Iniciar el seguimiento de MLflow
+    # Configurar MLflow
     mlflow.set_experiment("HS Code Classification")
     
     with mlflow.start_run():
-         Entrenar el modelo
-        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        # Entrenar el modelo
+        model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
         model.fit(X_train, y_train)
         
-         Evaluar el modelo
+        # Evaluar el modelo
         y_pred = model.predict(X_test)
-        report = classification_report(y_test, y_pred, output_dict=True)
+        report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
         
-         Registrar métricas y parámetros
-        mlflow.log_param("n_estimators", 100)
-        mlflow.log_metric("accuracy", report['accuracy'])
+        # Registrar métricas específicas
+        mlflow.log_metric("accuracy", report['accuracy'] if 'accuracy' in report else 0.0)
         mlflow.log_metric("weighted_avg_f1-score", report['weighted avg']['f1-score'])
         
-         Guardar el modelo
-        mlflow.sklearn.log_model(model, "model")
+        # Crear el directorio models si no existe
+        os.makedirs('models', exist_ok=True)
         
+        # Guardar el modelo
+        joblib.dump(model, 'models/hs_code_classifier.joblib')
+        print("Entrenamiento completado. Modelo guardado.")
         print("Classification Report:")
-        print(classification_report(y_test, y_pred))
-    
-    return model
+        print(classification_report(y_test, y_pred, zero_division=0))
+
 if __name__ == "__main__":
-    model = train_and_evaluate_model()
-    joblib.dump(model, 'models/hs_code_classifier.joblib')
+    train_and_evaluate_model()
+```
+
+**Paso 2.** Ejecuta el escript
+
+```
+python src/train_model.py
 ```
 
 ### Tarea 4. Implementación del servicio de predicción.
 
 **Paso 1.** Crea un script (`src/predict_service.py`) para implementar el servicio de predicción:
 
-```python
+```
 from flask import Flask, request, jsonify
 import joblib
-import numpy as np
+
 app = Flask(__name__)
- Cargar el modelo y el vectorizador
+
+# Cargar el modelo y el vectorizador
 model = joblib.load('models/hs_code_classifier.joblib')
 vectorizer = joblib.load('models/tfidf_vectorizer.joblib')
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
-    description = data['description']
+    description = data.get('description', '')
     
-     Vectorizar la descripción
+    # Vectorizar la descripción
     vectorized_description = vectorizer.transform([description])
     
-     Realizar la predicción
+    # Realizar la predicción
     prediction = model.predict(vectorized_description)[0]
-    
     return jsonify({'hs_code': prediction})
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
+```
+
+**Paso 2.** Ejecuta el escript
+
+```
+python src/predict_service.py
+```
+
+**Paso 3.** En una terminal **Git Bash** ejecuta el siguiente comando para enviar solicitudes.
+
+```
+curl -X POST http://localhost:5000/predict \
+-H "Content-Type: application/json" \
+-d '{"description": "Smartphone, 6.5-inch display, 128GB storage"}'
+```
+
+```
+curl -X POST http://localhost:5000/predict \
+-H "Content-Type: application/json" \
+-d "{\"description\": \"Men's cotton t-shirt, short sleeve, blue\"}"
 ```
 
 ### Tarea 5. Pruebas y validación.
 
 **Paso 1.** Crea un script (`src/test_model.py`) para realizar pruebas adicionales:
 
-```python
+```
+import os
 import joblib
 from sklearn.metrics import confusion_matrix, classification_report
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 def test_model():
-     Cargar el modelo y los datos de prueba
+    # Cargar el modelo y los datos de prueba
     model = joblib.load('models/hs_code_classifier.joblib')
     X_test = joblib.load('data/processed/X_test.joblib')
     y_test = joblib.load('data/processed/y_test.joblib')
     
-     Realizar predicciones
+    # Realizar predicciones
     y_pred = model.predict(X_test)
     
-     Generar informe de clasificación
-    report = classification_report(y_test, y_pred)
+    # Generar informe de clasificación
+    report = classification_report(y_test, y_pred, zero_division=0)
     print("Classification Report:")
     print(report)
     
-     Generar matriz de confusión
+    # Generar matriz de confusión
     cm = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
     plt.title('Confusion Matrix')
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
+    
+    # Crear el directorio 'reports/' si no existe
+    os.makedirs('reports', exist_ok=True)
+    
+    # Guardar la imagen de la matriz de confusión
     plt.savefig('reports/confusion_matrix.png')
     plt.close()
+
 if __name__ == "__main__":
     test_model()
 ```
 
+**Paso 2.** Ejecuta el escript
+
+```
+python src/test_model.py
+```
+
 ### Tarea 6. Documentación.
 
-**Paso 1.** Crea un documento de modelo (`model_card.md`):
+**Paso 1.** Crea un documento de modelo (`src/model_card.md`):
 
-```markdown
- Model Card: HS Code Classifier
- Model Details
-- Developer: [Your Name]
-- Model Date: [Current Date]
-- Model Version: 1.0
-- Model Type: Random Forest Classifier
- Intended Use
-- Primary Use: Assist customs officers in classifying imported goods according to the Harmonized System (HS)
-- Intended Users: Customs officers and import/export specialists
- Training Data
-- Source: Historical import data with product descriptions and corresponding HS codes
-- Size: [Number of samples] records
-- Preprocessing: TF-IDF vectorization of product descriptions
- Evaluation Data
-- 20% hold-out test set from the original dataset
- Ethical Considerations
-- The model should be used as a tool to assist human decision-making, not to replace it entirely
-- Regular audits should be performed to ensure the model is not introducing or amplifying biases
- Caveats and Recommendations
-- The model's performance may vary for product categories that are underrepresented in the training data
-- The model should be retrained periodically with new data to stay up-to-date with changes in product descriptions and HS codes
-- Users should be trained on how to interpret the model's predictions and when to seek additional verification
+```
+# Model Card: HS Code Classifier
+
+## Detalles del modelo
+- **Developer:** [Tu nombre]
+- **Model Date:** [Fecha actual]
+- **Model Version:** 1.0
+- **Model Type:** Random Forest Classifier
+
+## Uso
+- **Primary Use:** Ayudar a los agentes aduaneros a clasificar productos importados según el Sistema Armonizado (HS).
+- **Intended Users:** Agentes aduaneros y especialistas en comercio exterior.
+
+## Datos de entrenamiento
+- **Source:** Datos históricos de importación con descripciones de productos y sus códigos HS correspondientes.
+- **Size:** [Número de registros].
+- **Preprocessing:** Vectorización TF-IDF de descripciones de productos.
+
+## Datos de evaluación
+- **Size:** 20% del conjunto de datos original como prueba.
+
+## Consideraciones eticas
+- El modelo debe ser usado como herramienta de apoyo, no como reemplazo de la toma de decisiones humanas.
+- Auditorías regulares para evitar sesgos en los datos.
+
+## Recomendaciones
+- El rendimiento puede variar para categorías de productos con representación limitada en los datos de entrenamiento.
+- Se recomienda actualizar el modelo periódicamente con datos nuevos.
 ```
  
-### Tarea 7. Despliegue y monitoreo.
-**Paso 1.** Utiliza Docker para containerizar la aplicación. Crea un `Dockerfile`:
+### Tarea 7. Monitoreo del servicio.
 
-```dockerfile
-FROM python:3.8-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY src/ .
-COPY models/ models/
-CMD ["python", "predict_service.py"]
+**Paso 1.** Activa el software de **Docker Desktop** en el sistema operativo de Windows y tu area de trabajo.
+
+**Paso 2.** En la raíz de tu proyecto, crea un archivo llamado `prometheus.yml` con el siguiente contenido:
+
 ```
-**Paso 2.** Crea un script (`src/monitor_service.py`) para monitorear el servicio:
+global:
+  scrape_interval: 15s  # Frecuencia con la que se recolectan métricas
 
-```python
+scrape_configs:
+  - job_name: 'hs_code_service'
+    static_configs:
+      - targets: ['host.docker.internal:8000']  # Endpoint del servicio de métricas
+```
+
+**Paso 3.** En la raíz del proyecto crea un archivo `docker-compose.yml` para gestionar **Prometheus** y **Grafana** con Docker:
+
+```
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"  # Exponer Prometheus en el puerto 9090
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"  # Exponer Grafana en el puerto 3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+```
+
+**Paso 4.** Ejecuta el siguiente comando en el directorio donde está el archivo **docker-compose.yml**:
+
+```
+docker-compose up -d
+```
+
+**TROUBLESHOOTING** Si ya tienes creados los contendores puedes eliminarlos y recrearlos aplicando los siguientes comandos y si la salida de los comandos aparece vacia ejecuta el **Paso 4**.
+
+```
+docker ps -a
+```
+```
+docker rm <CONTAINER-ID> -f
+```
+```
+docker ps
+```
+```
+docker ps -a
+```
+
+**Paso 5.** Crea un script (`src/monitor_service.py`) para monitorear el servicio:
+
+```
 import requests
 import time
 import logging
@@ -262,26 +375,71 @@ if __name__ == '__main__':
     monitor_prediction_service()
 ```
 
-**Paso 3.** Configura Prometheus y Grafana para visualizar las métricas del servicio.
+**Paso 6.** Ejecuta el escript y deja la ventana activa, no la cierres
 
-### Tarea 8. Mantenimiento y actualización.
+```
+python src/monitor_service.py
+```
+
+**Paso 7.** Sino tienes activo el script **predict_service.py** activalo en una terminal de Visual Studio Code y realiza las pruebas, tambien deja la terminal abierta.
+
+**Paso 8.** Acceder a Grafana en `http://localhost:3000` en una pestaña nueva de tu navegador:
+
+**Paso 9.** Si te pide usuario y contraseña a todas las opciones puedes escribir `admin`
+
+**Paso 10.** En la pantalla principal de Grafana da clic en la opción **Data Sources**.
+
+**Paso 11.** Selecciona la oción de **Prometheus**.
+
+**Paso 12.** En la sección de **Connection** escribe: `http://prometheus:9090` para enlazar grafana con prometheus.
+
+**Paso 13.** Al final de la pagina da clic en el botón **Save & test**.
+
+**Paso 14.** Ahora hasta arriba esquina superior derecha de la pagina de prometheus en grafana da clic en **Build a Dashboard**.
+
+**Paso 15.** Ahora clic en **Add visualization**
+
+**Paso 16.** Selecciona **Prometheus**
+
+**Paso 17.** En el panel lateral derecho en la opción **Title** y escribe `HS Code Monitoring`
+
+**Paso 18.** Selecciona la metrica llamada `hs_code_predictions_total` o `prediction_response_time_seconds_sum`, tambien puedes probar cualquier otra de interes.
+
+### Tarea 8. Actualización del modelo.
 
 **Paso 1.** Crea un script (`src/update_model.py`) para actualizar periódicamente el modelo:
 
-```python
+```
 import schedule
 import time
+from datetime import datetime
 from train_model import train_and_evaluate_model
+
 def update_model_job():
-    print("Updating HS Code Classifier model...")
-    train_and_evaluate_model()
-    print("Model updated and saved.")
- Programar la actualización del modelo para que ocurra cada mes
-schedule.every().month.at("02:00").do(update_model_job)
+    today = datetime.now()
+    # Verificar si es el primer día del mes
+    if today.day == 1:
+        print("Updating HS Code Classifier model...")
+        train_and_evaluate_model()
+        print("Model updated and saved.")
+
+# Programar la verificación diaria
+schedule.every().day.at("02:00").do(update_model_job)
+
 if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(1)
+```
+
+**Paso 2.** Ejecuta el escript, el escript quedara en proceso de espera para la programación de la actualización del modelo, para esta tarea solo es demostrativo.
+
+```
+python src/update_model.py
+```
+
+```
+CTRL + C
 ```
 
 ## Resultado esperado:
