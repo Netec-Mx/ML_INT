@@ -36,7 +36,6 @@ id,description,hs_code
 1,"Laptop computer, 15-inch screen, 8GB RAM, 256GB SSD",8471.30
 2,"Men's cotton t-shirt, short sleeve, blue",6109.10
 3,"Smartphone, 6.1-inch display, 128GB storage",8517.13
-...
 ```
 
 ### Tarea 2. Preparación y análisis de datos.
@@ -279,7 +278,7 @@ python src/test_model.py
  
 ### Tarea 7. Monitoreo del servicio.
 
-**Paso 1.** Activa el software de **Docker Desktop** en el sistema operativo de Windows y tu area de trabajo.
+**Paso 1.** Activa el software de **Docker Desktop** en el sistema operativo de Windows o tu area de trabajo.
 
 **Paso 2.** En la raíz de tu proyecto, crea un archivo llamado `prometheus.yml` con el siguiente contenido:
 
@@ -324,7 +323,7 @@ services:
 docker-compose up -d
 ```
 
-**TROUBLESHOOTING** Si ya tienes creados los contendores puedes eliminarlos y recrearlos aplicando los siguientes comandos y si la salida de los comandos aparece vacia ejecuta el **Paso 4**.
+**TROUBLESHOOTING:** Si ya tienes creados los contendores puedes eliminarlos y recrearlos aplicando los siguientes comandos y si la salida de los comandos aparece vacia ejecuta el **Paso 4**.
 
 ```
 docker ps -a
