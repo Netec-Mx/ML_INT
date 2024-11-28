@@ -345,9 +345,11 @@ import requests
 import time
 import logging
 from prometheus_client import start_http_server, Counter, Histogram
- Configurar logging
+
+# Configurar logging
 logging.basicConfig(filename='hs_code_classifier.log', level=logging.INFO)
- Métricas de Prometheus
+
+# Métricas de Prometheus
 PREDICTIONS = Counter('hs_code_predictions_total', 'Total number of predictions')
 RESPONSE_TIME = Histogram('prediction_response_time_seconds', 'Response time for predictions')
 def monitor_prediction_service():
@@ -368,9 +370,9 @@ def monitor_prediction_service():
         except Exception as e:
             logging.error(f"Error in monitoring: {str(e)}")
         
-        time.sleep(60)   Esperar 1 minuto antes de la próxima verificación
+        time.sleep(60)  # Esperar 1 minuto antes de la próxima verificación
 if __name__ == '__main__':
-    start_http_server(8000)   Iniciar servidor de métricas de Prometheus
+    start_http_server(8000)  # Iniciar servidor de métricas de Prometheus
     monitor_prediction_service()
 ```
 
